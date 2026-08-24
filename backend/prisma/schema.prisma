@@ -1,0 +1,177 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Usuario {
+  id                       String                                @id @default(uuid()) @db.Uuid
+  nombre                   String                               @db.VarChar(255)
+  email                    String                               @unique @db.VarChar(255)
+  password_hash            String?                              @db.VarChar(255)
+  foto_url                 String?                              @db.VarChar(1000)
+  radio_busqueda_km        Int                                  @default(5)
+  ubicacion                Unsupported("geography(Point, 4326)")?
+  ubicacion_actualizada_en DateTime?                            @db.Timestamptz()
+  creado_en                DateTime                             @default(now()) @db.Timestamptz()
+
+  perfiles_deportivos      PerfilDeportivo[]
+  fotos                    PerfilFoto[]
+  equipos_creados          Equipo[]              @relation("EquiposCreados")
+  equipo_miembros          EquipoMiembro[]
+  centros_administrados    CentroDeportivo[]     @relation("CentrosAdmin")
+  reservas                 Reserva[]
+  partidos_organizados     Partido[]             @relation("PartidosOrganizados")
+  partido_jugadores        PartidoJugador[]
+  calificaciones_recibidas Calificacion[]        @relation("UsuarioCalificado")
+  calificaciones_dadas     Calificacion[]        @relation("UsuarioCalificador")
+
+  @@map("usuarios")
+}
+
+model PerfilDeportivo {
+  usuario_id String  @db.Uuid
+  deporte    String  @db.VarChar(50)
+  posicion   String? @db.VarChar(50)
+  nivel      String? @db.VarChar(50)
+  activo     Boolean @default(false)
+
+  usuario Usuario @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+
+  @@id([usuario_id, deporte])
+  @@map("perfiles_deportivos")
+}
+
+model PerfilFoto {
+  id         String   @id @default(uuid()) @db.Uuid
+  usuario_id String   @db.Uuid
+  url        String   @db.VarChar(1000)
+  tipo       String   @default("FOTO") @db.VarChar(20)
+  orden      Int      @default(0)
+  creado_en  DateTime @default(now()) @db.Timestamptz()
+
+  usuario Usuario @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+
+  @@map("perfil_fotos")
+}
+
+model Equipo {
+  id         String   @id @default(uuid()) @db.Uuid
+  nombre     String   @db.VarChar(255)
+  deporte    String?  @db.VarChar(50)
+  foto_url   String?  @db.VarChar(1000)
+  creado_por String   @db.Uuid
+  creado_en  DateTime @default(now()) @db.Timestamptz()
+
+  creador  Usuario         @relation("EquiposCreados", fields: [creado_por], references: [id], onDelete: Cascade)
+  miembros EquipoMiembro[]
+
+  @@map("equipos")
+}
+
+model EquipoMiembro {
+  equipo_id   String   @db.Uuid
+  usuario_id  String   @db.Uuid
+  rol         String   @default("MIEMBRO") @db.VarChar(50)
+  estado      String   @default("PENDIENTE") @db.VarChar(20)
+  invitado_en DateTime @default(now()) @db.Timestamptz()
+
+  equipo  Equipo  @relation(fields: [equipo_id], references: [id], onDelete: Cascade)
+  usuario Usuario @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+
+  @@id([equipo_id, usuario_id])
+  @@map("equipo_miembros")
+}
+
+model CentroDeportivo {
+  id               String @id @default(uuid()) @db.Uuid
+  nombre           String @db.VarChar(255)
+  usuario_admin_id String @db.Uuid
+
+  usuario_admin Usuario  @relation("CentrosAdmin", fields: [usuario_admin_id], references: [id], onDelete: Cascade)
+  canchas       Cancha[]
+
+  @@map("centros_deportivos")
+}
+
+model Cancha {
+  id                  String                               @id @default(uuid()) @db.Uuid
+  nombre              String                               @db.VarChar(255)
+  centro_deportivo_id String                               @db.Uuid
+  ubicacion           Unsupported("geography(Point, 4326)")?
+  tipo                String                               @db.VarChar(50)
+  precio_hora         Decimal                              @db.Decimal(10, 2)
+
+  centro_deportivo CentroDeportivo @relation(fields: [centro_deportivo_id], references: [id], onDelete: Cascade)
+  reservas         Reserva[]
+  partidos         Partido[]
+
+  @@map("canchas")
+}
+
+model Reserva {
+  id          String   @id @default(uuid()) @db.Uuid
+  cancha_id   String   @db.Uuid
+  usuario_id  String   @db.Uuid
+  fecha       DateTime @db.Date
+  hora_inicio String   @db.VarChar(10)
+  hora_fin    String   @db.VarChar(10)
+  estado      String   @default("PENDIENTE") @db.VarChar(50)
+
+  cancha  Cancha  @relation(fields: [cancha_id], references: [id], onDelete: Cascade)
+  usuario Usuario @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+
+  @@map("reservas")
+}
+
+model Partido {
+  id               String    @id @default(uuid()) @db.Uuid
+  deporte          String    @db.VarChar(50)
+  estado           String    @default("BUSCANDO_GENTE") @db.VarChar(50)
+  organizador_id   String    @db.Uuid
+  cancha_id        String?   @db.Uuid
+  fecha            DateTime? @db.Date
+  hora_inicio      String?   @db.VarChar(10)
+  hora_fin         String?   @db.VarChar(10)
+  nivel_requerido  String?   @db.VarChar(50)
+
+  organizador    Usuario          @relation("PartidosOrganizados", fields: [organizador_id], references: [id], onDelete: Cascade)
+  cancha         Cancha?          @relation(fields: [cancha_id], references: [id], onDelete: SetNull)
+  jugadores      PartidoJugador[]
+  calificaciones Calificacion[]
+
+  @@map("partidos")
+}
+
+model PartidoJugador {
+  partido_id String   @db.Uuid
+  usuario_id String   @db.Uuid
+  unido_en   DateTime @default(now()) @db.Timestamptz()
+
+  partido Partido @relation(fields: [partido_id], references: [id], onDelete: Cascade)
+  usuario Usuario @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+
+  @@id([partido_id, usuario_id])
+  @@map("partido_jugadores")
+}
+
+model Calificacion {
+  id                     String  @id @default(uuid()) @db.Uuid
+  partido_id             String  @db.Uuid
+  usuario_calificado_id  String  @db.Uuid
+  usuario_calificador_id String  @db.Uuid
+  puntuacion_juego       Int
+  puntuacion_puntualidad Int
+  puntuacion_actitud     Int
+  comentario             String? @db.Text
+
+  partido             Partido @relation(fields: [partido_id], references: [id], onDelete: Cascade)
+  usuario_calificado  Usuario @relation("UsuarioCalificado", fields: [usuario_calificado_id], references: [id], onDelete: Cascade)
+  usuario_calificador Usuario @relation("UsuarioCalificador", fields: [usuario_calificador_id], references: [id], onDelete: Cascade)
+
+  @@unique([partido_id, usuario_calificador_id, usuario_calificado_id])
+  @@map("calificaciones")
+}

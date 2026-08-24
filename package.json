@@ -1,0 +1,32 @@
+{
+  "name": "playconnect-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "PlayConnect - Monorepo for amateur sports connection platform",
+  "workspaces": [
+    "backend",
+    "mobile"
+  ],
+  "scripts": {
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:mobile": "npm --prefix mobile run start",
+    "build:backend": "npm --prefix backend run build",
+    "test:backend": "npm --prefix backend run test",
+    "lint": "npm run lint:backend && npm run lint:mobile",
+    "lint:backend": "npm --prefix backend run lint",
+    "lint:mobile": "npm --prefix mobile run lint",
+    "prisma:migrate": "npm --prefix backend run prisma:migrate",
+    "prisma:generate": "npm --prefix backend run prisma:generate"
+  },
+  "keywords": [
+    "playconnect",
+    "sports",
+    "express",
+    "react-native",
+    "expo",
+    "postgis",
+    "prisma"
+  ],
+  "author": "",
+  "license": "MIT"
+}
