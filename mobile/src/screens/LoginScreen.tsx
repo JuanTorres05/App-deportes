@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -24,8 +23,11 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleLogin = async () => {
-    if (!email || !password) {
+  const handleLogin = async (overrideEmail?: string, overridePassword?: string) => {
+    const targetEmail = overrideEmail || email;
+    const targetPassword = overridePassword || password;
+
+    if (!targetEmail || !targetPassword) {
       setError('Por favor ingresa email y contraseña');
       return;
     }
@@ -33,21 +35,22 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
     try {
       setError('');
       setLoading(true);
-      await login(email.trim(), password);
+      await login(targetEmail.trim(), targetPassword);
     } catch (err: unknown) {
       const errorResponse = err as { response?: { data?: { message?: string } } };
-      const msg = errorResponse.response?.data?.message || 'Error al iniciar sesión. Revisa tus credenciales.';
+      const msg =
+        errorResponse.response?.data?.message ||
+        'Error al iniciar sesión. Revisa tus credenciales o conexión.';
       setError(msg);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSocialLogin = (provider: string) => {
-    Alert.alert(
-      'Login Social',
-      `Inicio de sesión con ${provider} (Preparado para próximos sprints)`
-    );
+  const quickLogin = (demoEmail: string) => {
+    setEmail(demoEmail);
+    setPassword('Password123!');
+    handleLogin(demoEmail, 'Password123!');
   };
 
   return (
@@ -55,75 +58,103 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
-          <Text style={styles.title}>PlayConnect</Text>
-          <Text style={styles.subtitle}>Conecta, arma equipo y juega</Text>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Brand Emblem & Hero */}
+        <View style={styles.brandHero}>
+          <View style={styles.logoBadge}>
+            <Text style={styles.logoIcon}>⚡</Text>
+          </View>
+          <Text style={styles.brandTitle}>PlayConnect</Text>
+          <View style={styles.taglinePill}>
+            <Text style={styles.taglineText}>LA RED SOCIAL DEL DEPORTE</Text>
+          </View>
         </View>
 
-        <View style={styles.form}>
-          <Text style={styles.formTitle}>Iniciar Sesión</Text>
+        {/* Auth Form Card */}
+        <View style={styles.formCard}>
+          <Text style={styles.formTitle}>Bienvenido de vuelta</Text>
+          <Text style={styles.formSub}>Ingresa para armar partidos y reservar canchas</Text>
 
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+          {error ? (
+            <View style={styles.errorBox}>
+              <Text style={styles.errorIcon}>⚠️</Text>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          ) : null}
 
-          <Text style={styles.label}>Correo electrónico</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="tu@email.com"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
+          <Text style={styles.inputLabel}>Correo electrónico</Text>
+          <View style={styles.inputWrapper}>
+            <Text style={styles.inputIcon}>✉️</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="tu@email.com"
+              placeholderTextColor="#9CA3AF"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+          </View>
 
-          <Text style={styles.label}>Contraseña</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="••••••••"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
+          <Text style={styles.inputLabel}>Contraseña</Text>
+          <View style={styles.inputWrapper}>
+            <Text style={styles.inputIcon}>🔒</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="••••••••"
+              placeholderTextColor="#9CA3AF"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+            />
+          </View>
 
           <TouchableOpacity
-            style={styles.button}
-            onPress={handleLogin}
+            style={[styles.loginBtn, loading && styles.disabledBtn]}
+            onPress={() => handleLogin()}
             disabled={loading}
+            activeOpacity={0.85}
           >
             {loading ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={styles.buttonText}>Ingresar</Text>
+              <Text style={styles.loginBtnText}>Iniciar Sesión ➔</Text>
             )}
           </TouchableOpacity>
 
-          <View style={styles.divider}>
-            <View style={styles.line} />
-            <Text style={styles.dividerText}>o continuar con</Text>
-            <View style={styles.line} />
+          {/* Quick Demo Access Bar */}
+          <View style={styles.quickAccessSection}>
+            <Text style={styles.quickAccessTitle}>⚡ Acceso rápido de prueba:</Text>
+            <View style={styles.demoChipsRow}>
+              <TouchableOpacity
+                style={styles.demoChip}
+                onPress={() => quickLogin('carlos@playconnect.com')}
+                disabled={loading}
+              >
+                <Text style={styles.demoChipText}>⚽ Carlos (Fútbol)</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.demoChip}
+                onPress={() => quickLogin('mateo@playconnect.com')}
+                disabled={loading}
+              >
+                <Text style={styles.demoChipText}>🎾 Mateo (Pádel)</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.demoChip}
+                onPress={() => quickLogin('admin@playconnect.com')}
+                disabled={loading}
+              >
+                <Text style={styles.demoChipText}>🏢 Admin</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
-          <View style={styles.socialButtons}>
-            <TouchableOpacity
-              style={styles.socialButton}
-              onPress={() => handleSocialLogin('Google')}
-            >
-              <Text style={styles.socialButtonText}>Google</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.socialButton}
-              onPress={() => handleSocialLogin('Apple')}
-            >
-              <Text style={styles.socialButtonText}>Apple</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>¿No tienes una cuenta? </Text>
+          <View style={styles.footerRow}>
+            <Text style={styles.footerPrompt}>¿Aún no tienes cuenta?</Text>
             <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-              <Text style={styles.linkText}>Regístrate aquí</Text>
+              <Text style={styles.registerLink}> Regístrate gratis</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -135,125 +166,191 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#0F172A', // Dark Slate Obsidian
   },
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
-    padding: 24,
+    paddingHorizontal: 20,
+    paddingVertical: 36,
   },
-  header: {
+  brandHero: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 24,
   },
-  title: {
-    fontSize: 36,
+  logoBadge: {
+    width: 68,
+    height: 68,
+    borderRadius: 22,
+    backgroundColor: '#10B981',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8,
+    marginBottom: 12,
+  },
+  logoIcon: {
+    fontSize: 34,
+  },
+  brandTitle: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
+  },
+  taglinePill: {
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginTop: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.3)',
+  },
+  taglineText: {
+    fontSize: 11,
     fontWeight: 'bold',
     color: '#10B981',
+    letterSpacing: 1,
   },
-  subtitle: {
-    fontSize: 16,
-    color: '#6B7280',
-    marginTop: 4,
-  },
-  form: {
+  formCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: 24,
     padding: 24,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 8,
   },
   formTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 'bold',
-    color: '#111827',
-    marginBottom: 16,
+    color: '#0F172A',
+  },
+  formSub: {
+    fontSize: 13,
+    color: '#64748B',
+    marginTop: 4,
+    marginBottom: 18,
+  },
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 14,
+    gap: 8,
+  },
+  errorIcon: {
+    fontSize: 14,
   },
   errorText: {
-    color: '#EF4444',
-    backgroundColor: '#FEE2E2',
-    padding: 10,
-    borderRadius: 8,
-    marginBottom: 12,
-    fontSize: 14,
-  },
-  label: {
-    fontSize: 14,
+    color: '#DC2626',
+    fontSize: 12,
     fontWeight: '600',
-    color: '#374151',
+    flex: 1,
+  },
+  inputLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#334155',
     marginBottom: 6,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    marginBottom: 14,
+  },
+  inputIcon: {
+    fontSize: 16,
+    marginRight: 8,
   },
   input: {
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    backgroundColor: '#F9FAFB',
-    marginBottom: 16,
+    flex: 1,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: '#0F172A',
   },
-  button: {
+  loginBtn: {
     backgroundColor: '#10B981',
-    borderRadius: 8,
-    padding: 14,
+    borderRadius: 14,
+    paddingVertical: 14,
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 6,
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  buttonText: {
+  disabledBtn: {
+    opacity: 0.6,
+  },
+  loginBtnText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold',
+    letterSpacing: 0.3,
   },
-  divider: {
+  quickAccessSection: {
+    marginTop: 18,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  quickAccessTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#64748B',
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  demoChipsRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 20,
+    flexWrap: 'wrap',
+    gap: 6,
   },
-  line: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#E5E7EB',
-  },
-  dividerText: {
-    marginHorizontal: 12,
-    color: '#9CA3AF',
-    fontSize: 12,
-  },
-  socialButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  socialButton: {
-    flex: 1,
+  demoChip: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 8,
-    padding: 12,
-    alignItems: 'center',
-    marginHorizontal: 4,
-    backgroundColor: '#FAFAFA',
+    borderColor: '#E2E8F0',
   },
-  socialButtonText: {
-    fontSize: 14,
+  demoChipText: {
+    fontSize: 11,
     fontWeight: '600',
-    color: '#374151',
+    color: '#334155',
   },
-  footer: {
+  footerRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 8,
+    alignItems: 'center',
+    marginTop: 20,
   },
-  footerText: {
-    color: '#6B7280',
-    fontSize: 14,
+  footerPrompt: {
+    color: '#64748B',
+    fontSize: 13,
   },
-  linkText: {
+  registerLink: {
     color: '#10B981',
+    fontSize: 13,
     fontWeight: 'bold',
-    fontSize: 14,
   },
 });
