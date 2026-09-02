@@ -8,23 +8,39 @@ const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:4000/api/v1
 export const storage = {
   async getItem(key: string): Promise<string | null> {
     if (Platform.OS === 'web') {
-      return typeof window !== 'undefined' ? localStorage.getItem(key) : null;
+      try {
+        return typeof window !== 'undefined' && window.localStorage ? localStorage.getItem(key) : null;
+      } catch (_e) {
+        return null;
+      }
     }
-    return await SecureStore.getItemAsync(key);
+    try {
+      return await SecureStore.getItemAsync(key);
+    } catch (_e) {
+      return null;
+    }
   },
   async setItem(key: string, value: string): Promise<void> {
     if (Platform.OS === 'web') {
-      if (typeof window !== 'undefined') localStorage.setItem(key, value);
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) localStorage.setItem(key, value);
+      } catch (_e) {}
       return;
     }
-    await SecureStore.setItemAsync(key, value);
+    try {
+      await SecureStore.setItemAsync(key, value);
+    } catch (_e) {}
   },
   async removeItem(key: string): Promise<void> {
     if (Platform.OS === 'web') {
-      if (typeof window !== 'undefined') localStorage.removeItem(key);
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) localStorage.removeItem(key);
+      } catch (_e) {}
       return;
     }
-    await SecureStore.deleteItemAsync(key);
+    try {
+      await SecureStore.deleteItemAsync(key);
+    } catch (_e) {}
   },
 };
 

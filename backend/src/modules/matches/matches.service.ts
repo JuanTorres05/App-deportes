@@ -148,10 +148,91 @@ export class MatchesService {
       where: { id: partidoId },
       include: {
         organizador: { select: { id: true, nombre: true, foto_url: true } },
+        cancha: {
+          include: {
+            centro_deportivo: { select: { nombre: true } },
+          },
+        },
         jugadores: { include: { usuario: { select: { id: true, nombre: true, foto_url: true } } } },
       },
     });
     if (!match) throw new AppError('Partido no encontrado', 404);
     return match;
   }
+
+  static async getCostSplit(partidoId: string) {
+    const match = await prisma.partido.findUnique({
+      where: { id: partidoId },
+      include: {
+        cancha: true,
+        jugadores: { include: { usuario: { select: { id: true, nombre: true, foto_url: true } } } },
+      },
+    });
+
+    if (!match) throw new AppError('Partido no encontrado', 404);
+
+    const precioTotal = match.cancha ? Number(match.cancha.precio_hora) : 10000;
+    const totalJugadores = Math.max(match.jugadores.length, 1);
+    const cuotaIndividual = Math.round((precioTotal / totalJugadores) * 100) / 100;
+
+    const key = `payments_${partidoId}`;
+    const paidSet = paymentStore[key] || new Set<string>();
+
+    const desglose = match.jugadores.map((j) => ({
+      usuario: j.usuario,
+      cuota: cuotaIndividual,
+      pagado: paidSet.has(j.usuario.id),
+    }));
+
+    return {
+      partido_id: partidoId,
+      precio_total: precioTotal,
+      cuota_individual: cuotaIndividual,
+      total_jugadores: totalJugadores,
+      recaudado: paidSet.size * cuotaIndividual,
+      desglose,
+    };
+  }
+
+  static async updatePlayerPayment(partidoId: string, userId: string, pagado: boolean) {
+    const key = `payments_${partidoId}`;
+    if (!paymentStore[key]) paymentStore[key] = new Set();
+
+    if (pagado) {
+      paymentStore[key].add(userId);
+    } else {
+      paymentStore[key].delete(userId);
+    }
+
+    return { partido_id: partidoId, usuario_id: userId, pagado };
+  }
+
+  static async getMatchMessages(partidoId: string) {
+    return chatStore[partidoId] || [];
+  }
+
+  static async sendMatchMessage(partidoId: string, senderId: string, contenido: string) {
+    const sender = await prisma.usuario.findUnique({
+      where: { id: senderId },
+      select: { id: true, nombre: true, foto_url: true },
+    });
+
+    if (!sender) throw new AppError('Usuario no encontrado', 404);
+
+    const message = {
+      id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+      partido_id: partidoId,
+      emisor: sender,
+      contenido,
+      creado_en: new Date().toISOString(),
+    };
+
+    if (!chatStore[partidoId]) chatStore[partidoId] = [];
+    chatStore[partidoId].push(message);
+
+    return message;
+  }
 }
+
+const paymentStore: Record<string, Set<string>> = {};
+const chatStore: Record<string, Array<{ id: string; partido_id: string; emisor: { id: string; nombre: string; foto_url: string | null }; contenido: string; creado_en: string }>> = {};

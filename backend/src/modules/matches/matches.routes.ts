@@ -16,5 +16,9 @@ router.get('/history', MatchesController.getHistory);
 router.get('/:id', MatchesController.getById);
 router.post('/:id/participants', MatchesController.addParticipant);
 router.put('/:id/mark-played', MatchesController.markAsPlayed);
+router.get('/:id/cost-split', MatchesController.getCostSplit);
+router.put('/:id/payment', MatchesController.updatePayment);
+router.get('/:id/messages', MatchesController.getMessages);
+router.post('/:id/messages', MatchesController.sendMessage);
 
 export default router;

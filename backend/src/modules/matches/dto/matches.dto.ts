@@ -17,5 +17,16 @@ export const matchHistoryQuerySchema = z.object({
   limit: z.string().transform(Number).default('10'),
 });
 
+export const sendMessageSchema = z.object({
+  contenido: z.string().min(1, 'El mensaje no puede estar vacío').max(500, 'Máximo 500 caracteres'),
+});
+
+export const updatePaymentSchema = z.object({
+  usuario_id: z.string().uuid('ID de usuario inválido'),
+  pagado: z.boolean(),
+});
+
 export type CreateMatchDto = z.infer<typeof createMatchSchema>;
 export type AddParticipantDto = z.infer<typeof addParticipantSchema>;
+export type SendMessageDto = z.infer<typeof sendMessageSchema>;
+export type UpdatePaymentDto = z.infer<typeof updatePaymentSchema>;
